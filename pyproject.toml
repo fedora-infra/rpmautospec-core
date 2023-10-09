@@ -1,0 +1,39 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rpmautospec-core"
+version = "0.1.0"
+description = "Core functionality for rpmautospec"
+authors = ["Nils Philippsen <nils@redhat.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/fedora-infra/rpmautospec-core"
+packages = [
+    { include = "rpmautospec_core/**/*.py" },
+]
+include = [
+    { path = "DCO.txt", format = "sdist" },
+    { path = "tests/**/*.py", format = "sdist" },
+]
+exclude = [
+    "**/.coverage",
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.2 || ^7"
+pytest-cov = "^4.0.0"
+pytest-xdist = "^2.5.0 || ^3"
+
+[tool.black]
+line_length = 100
+
+[tool.pytest.ini_options]
+addopts = "--cov --cov-config .coveragerc --cov-report term --cov-report xml --cov-report html"
+
+[tool.ruff]
+line-length = 100

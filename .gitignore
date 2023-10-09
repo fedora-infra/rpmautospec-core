@@ -1,0 +1,16 @@
+# Python package related
+/build/
+/dist/
+/rpmautospec_core.egg-info/
+
+# Visual Studio Code configuration
+/.vscode
+
+# Coverage related
+/htmlcov/
+/coverage.xml
+.coverage
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]

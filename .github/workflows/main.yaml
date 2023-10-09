@@ -1,0 +1,67 @@
+---
+# SPDX-FileCopyrightText: Contributors to the Fedora Project
+#
+# SPDX-License-Identifier: MIT
+
+name: CI
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  ci-smoketests:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    container: fedorapython/fedora-python-tox:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install absolufy and poetry
+        run: |
+          python3 -m pip install absolufy-imports poetry
+
+      - name: Enforce relative imports in package
+        run: >
+          find rpmautospec -name \*.py -print0
+          | xargs -0 absolufy-imports --never
+
+      - name: Check Poetry lock file consistency
+        run: >
+          poetry lock --check
+
+      - name: Run style tests
+        run: tox -e format,lint
+
+  ci-testsuite:
+    strategy:
+      fail-fast: false
+      matrix:
+        pyver: [36, 37, 38, 39, 310, 311, 312]
+    runs-on: ubuntu-latest
+    container: fedorapython/fedora-python-tox:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mark the directory as safe for git
+        run: git config --global --add safe.directory $PWD
+
+      - name: Install basic RPM dependencies
+        run: >
+          dnf -y install
+          gcc
+          glibc-langpack-de
+          glibc-langpack-en
+          krb5-devel
+          libffi-devel
+          poetry
+          rpm
+          rpm-build
+
+      - name: Install libgit2-devel 1.7 package
+        if: ${{ matrix.pyver >= 312 }}
+        run: dnf --releasever=39 -y install libgit2-devel
+
+      - name: Install base Python dependencies
+        run: |
+          python3 -m pip install --upgrade tox
+
+      - name: run tests through tox
+        run: "tox -e py${{ matrix.pyver }}"
