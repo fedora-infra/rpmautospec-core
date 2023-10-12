@@ -27,7 +27,6 @@ python = "^3.6"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.2 || ^7"
 pytest-cov = "^4.0.0"
-pytest-xdist = "^2.5.0 || ^3"
 
 [tool.black]
 line_length = 100
