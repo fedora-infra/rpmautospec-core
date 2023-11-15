@@ -16,6 +16,7 @@ packages = [
 include = [
     { path = "DCO.txt", format = "sdist" },
     { path = "tests/**/*.py", format = "sdist" },
+    { path = "tests/test-specfiles/*", format = "sdist" },
     { path = "tox.ini", format = "sdist" },
 ]
 exclude = [
