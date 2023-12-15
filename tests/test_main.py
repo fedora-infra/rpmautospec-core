@@ -22,6 +22,7 @@ class TestMain:
         autorelease_flags="",
         with_changelog=True,
         with_autochangelog=True,
+        with_autorelease_definition=True,
     ):
         if autorelease_flags and not autorelease_flags.startswith(" "):
             autorelease_flags = " " + autorelease_flags
@@ -48,6 +49,9 @@ class TestMain:
             f"Line {base + 1}",
             f"Line {base + 2}",
         ]
+
+        if with_autorelease_definition:
+            contents[1] = "%define autorelease()"
         if with_changelog:
             contents.append("%changelog")
         if with_autochangelog:
@@ -68,19 +72,31 @@ class TestMain:
 
     @pytest.mark.parametrize(
         "with_autorelease, with_autorelease_braces, autorelease_flags, with_changelog,"
-        + " with_autochangelog",
+        + " with_autochangelog, with_autorelease_definition",
         (
-            pytest.param(True, False, "", True, True, id="all features"),
-            pytest.param("macro", False, "", True, True, id="all features, macro"),
+            # various feature combinations
+            pytest.param(True, False, "", True, True, False, id="all features"),
+            pytest.param("macro", False, "", True, True, False, id="all features, macro"),
             pytest.param(
-                True, False, "-b 200", True, True, id="with non standard base release number"
+                True, False, "-b 200", True, True, False, id="with non standard base release number"
             ),
-            pytest.param(True, True, "", True, True, id="all features, braces"),
-            pytest.param("macro", True, "", True, True, id="all features, braces, macro"),
+            pytest.param(True, True, "", True, True, False, id="all features, braces"),
+            pytest.param("macro", True, "", True, True, False, id="all features, braces, macro"),
             pytest.param(
-                True, True, "-b 200", True, True, id="with non standard base release number, braces"
+                True,
+                True,
+                "-b 200",
+                True,
+                True,
+                False,
+                id="with non standard base release number, braces",
             ),
-            pytest.param(False, False, "", True, False, id="nothing"),
+            # processed spec file
+            pytest.param(True, False, "", True, False, True, id="preprocessed"),
+            pytest.param("macro", False, "", True, False, True, id="preprocessed, macro"),
+            pytest.param(True, True, "", True, False, True, id="preprocessed, braces"),
+            # no features used
+            pytest.param(False, False, "", True, False, False, id="nothing"),
         ),
     )
     @pytest.mark.parametrize("specpath_type", (str, Path))
@@ -92,6 +108,7 @@ class TestMain:
         autorelease_flags,
         with_changelog,
         with_autochangelog,
+        with_autorelease_definition,
     ):
         with NamedTemporaryFile(mode="w+") as specfile:
             self._generate_spec_with_features(
@@ -101,6 +118,7 @@ class TestMain:
                 autorelease_flags=autorelease_flags,
                 with_changelog=with_changelog,
                 with_autochangelog=with_autochangelog,
+                with_autorelease_definition=with_autorelease_definition,
             )
 
             features = main.check_specfile_features(specpath_type(specfile.name))
@@ -115,6 +133,12 @@ class TestMain:
                 assert features.autochangelog_lineno == 8 if with_autorelease == "macro" else 7
             else:
                 assert features.autochangelog_lineno is None
+            assert features.has_autorelease_definition == with_autorelease_definition
+            assert features.is_processed == with_autorelease_definition
+            if with_autorelease_definition:
+                assert features.autorelease_definition_lineno == 2
+            else:
+                assert features.autorelease_definition_lineno is None
 
     def test_specfile_uses_rpmautospec_no_macros(self, caplog):
         """Test no macros on specfile_uses_rpmautospec()"""
@@ -125,6 +149,31 @@ class TestMain:
         result = main.specfile_uses_rpmautospec(specfile_path)
 
         assert result is False
+
+    @pytest.mark.parametrize("processed", (False, True), ids=("unprocessed", "processed"))
+    def test_specfile_uses_rpmautospec(self, processed, tmp_path, caplog):
+        """Test both features on specfile_uses_rpmautospec()"""
+        caplog.set_level(logging.DEBUG)
+
+        if processed:
+            specfile_path = __HERE__ / "test-specfiles" / "autorelease-processed.spec"
+        else:
+            specfile_path = __HERE__ / "test-specfiles" / "autorelease-autochangelog.spec"
+
+        result = main.specfile_uses_rpmautospec(specfile_path)
+        assert result is not processed
+
+        # Check only if the %autochangelog macro is present & unprocessed.
+        result_no_autorelease_processed = main.specfile_uses_rpmautospec(
+            specfile_path, check_autorelease=False, check_is_processed=False
+        )
+        assert result_no_autorelease_processed is not processed
+
+        # Check only that the %autorelease macro is present, ignore if it’s processed.
+        result_no_autochangelog_processed = main.specfile_uses_rpmautospec(
+            specfile_path, check_autochangelog=False, check_is_processed=False
+        )
+        assert result_no_autochangelog_processed is True
 
     def test_specfile_uses_rpmautospec_autorelease_only(self, caplog):
         """Test autorelease only on specfile_uses_rpmautospec()"""
@@ -155,7 +204,7 @@ class TestMain:
         assert result_no_changelog is False
 
     def test_specfile_uses_rpmautospec_throws_error(self, caplog):
-        """Test specfile_uses_rpmautospec() throws an error when both params are false"""
+        """Test specfile_uses_rpmautospec() throws an error when all params are false"""
         caplog.set_level(logging.DEBUG)
 
         specfile_path = __HERE__ / "test-specfiles" / "autochangelog-only.spec"
@@ -165,5 +214,8 @@ class TestMain:
 
         with pytest.raises(ValueError):
             main.specfile_uses_rpmautospec(
-                specfile_path, check_autochangelog=False, check_autorelease=False
+                specfile_path,
+                check_autochangelog=False,
+                check_autorelease=False,
+                check_is_processed=False,
             )
