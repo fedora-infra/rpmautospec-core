@@ -151,7 +151,7 @@ class TestMain:
         assert result is False
 
     @pytest.mark.parametrize("processed", (False, True), ids=("unprocessed", "processed"))
-    def test_specfile_uses_rpmautospec(self, processed, tmp_path, caplog):
+    def test_specfile_uses_rpmautospec(self, processed, caplog):
         """Test both features on specfile_uses_rpmautospec()"""
         caplog.set_level(logging.DEBUG)
 
