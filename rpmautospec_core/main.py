@@ -65,12 +65,18 @@ def _check_specfile_features(specpath: Path, mtime: float, size: int) -> Specfil
     )
 
 
-def check_specfile_features(specpath: Union[Path, str]) -> SpecfileFeatures:
+def check_specfile_features(specpath: Union[Path, str], *, enable_caching=True) -> SpecfileFeatures:
     if not isinstance(specpath, Path):
         specpath = Path(specpath).resolve()
 
     stat_result = specpath.stat()
-    return _check_specfile_features(specpath, stat_result.st_mtime, stat_result.st_size)
+
+    if enable_caching:
+        return _check_specfile_features(specpath, stat_result.st_mtime, stat_result.st_size)
+    else:
+        return _check_specfile_features.__wrapped__(
+            specpath, stat_result.st_mtime, stat_result.st_size
+        )
 
 
 def specfile_uses_rpmautospec(

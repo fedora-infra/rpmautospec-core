@@ -71,6 +71,8 @@ class TestMain:
         specfile.flush()
 
     @pytest.mark.parametrize(
+        "enable_caching", (True, False), ids=("enable-caching", "disable-caching"))
+    @pytest.mark.parametrize(
         "with_autorelease, with_autorelease_braces, autorelease_flags, with_changelog,"
         + " with_autochangelog, with_autorelease_definition",
         (
@@ -109,7 +111,10 @@ class TestMain:
         with_changelog,
         with_autochangelog,
         with_autorelease_definition,
+        enable_caching,
     ):
+        main._check_specfile_features.cache_clear()
+
         with NamedTemporaryFile(mode="w+") as specfile:
             self._generate_spec_with_features(
                 specfile,
@@ -121,7 +126,9 @@ class TestMain:
                 with_autorelease_definition=with_autorelease_definition,
             )
 
-            features = main.check_specfile_features(specpath_type(specfile.name))
+            features = main.check_specfile_features(
+                specpath_type(specfile.name), enable_caching=enable_caching
+            )
 
             assert features.has_autorelease == bool(with_autorelease)
             if with_changelog:
@@ -139,6 +146,19 @@ class TestMain:
                 assert features.autorelease_definition_lineno == 2
             else:
                 assert features.autorelease_definition_lineno is None
+
+            cache_info = main._check_specfile_features.cache_info()
+            assert cache_info.hits == 0
+            assert cache_info.misses == (1 if enable_caching else 0)
+
+            features_repeated = main.check_specfile_features(
+                specpath_type(specfile.name), enable_caching=enable_caching
+            )
+            assert features == features_repeated
+
+            cache_info = main._check_specfile_features.cache_info()
+            assert cache_info.hits == (1 if enable_caching else 0)
+            assert cache_info.misses == (1 if enable_caching else 0)
 
     def test_specfile_uses_rpmautospec_no_macros(self, caplog):
         """Test no macros on specfile_uses_rpmautospec()"""
