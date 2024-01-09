@@ -71,7 +71,8 @@ class TestMain:
         specfile.flush()
 
     @pytest.mark.parametrize(
-        "enable_caching", (True, False), ids=("enable-caching", "disable-caching"))
+        "enable_caching", (True, False), ids=("enable-caching", "disable-caching")
+    )
     @pytest.mark.parametrize(
         "with_autorelease, with_autorelease_braces, autorelease_flags, with_changelog,"
         + " with_autochangelog, with_autorelease_definition",
