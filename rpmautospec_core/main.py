@@ -97,9 +97,7 @@ def specfile_uses_rpmautospec(
     :return: Whether the spec file uses the specified features
     """
     if not check_autorelease and not check_autochangelog:
-        raise ValueError(
-            "One of check_autorelease and check_autochangelog must be set"
-        )
+        raise ValueError("One of check_autorelease and check_autochangelog must be set")
 
     features = check_specfile_features(specpath)
 
