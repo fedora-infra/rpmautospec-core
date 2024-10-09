@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pyver: [36, 37, 38, 39, 310, 311, 312]
+        pyver: [36, 37, 38, 39, 310, 311, 312, 313]
     runs-on: ubuntu-latest
     container: fedorapython/fedora-python-tox:latest
     steps:
