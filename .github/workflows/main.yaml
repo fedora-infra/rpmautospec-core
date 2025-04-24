@@ -25,7 +25,7 @@ jobs:
 
       - name: Check Poetry lock file consistency
         run: >
-          poetry lock --check
+          poetry check --lock
 
       - name: Run style tests
         run: tox -e format,lint
