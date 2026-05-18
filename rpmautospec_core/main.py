@@ -4,7 +4,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Union
 
-
 # the %autorelease macro including parameters
 AUTORELEASE_MACRO = "autorelease(e:s:pb:n)"
 
