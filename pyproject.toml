@@ -42,3 +42,8 @@ addopts = "--cov --cov-config .coveragerc --cov-report term --cov-report xml --c
 
 [tool.ruff]
 line-length = 100
+target-version = "py37"  # Really 3.6, but ruff's floor is 3.7
+
+[tool.ruff.lint]
+ignore = ["FA100"]  # typing.Dict/Union needed for Python 3.6 compat
+
