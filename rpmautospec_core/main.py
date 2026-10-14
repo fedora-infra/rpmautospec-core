@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Union
 
 # the %autorelease macro including parameters
-AUTORELEASE_MACRO = "autorelease(e:s:pb:n)"
+AUTORELEASE_MACRO = "autorelease(e:s:pb:nz)"
 
 autorelease_re = re.compile(r"%(?:autorelease(?:\s|$)|\{\??autorelease(?:\s+[^\}]*)?\})")
 changelog_re = re.compile(r"^%changelog(?:\s.*)?$", re.IGNORECASE)
