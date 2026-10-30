@@ -14,18 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install absolufy and poetry
+      - name: Install absolufy and UV
         run: |
-          python3 -m pip install absolufy-imports poetry
+          python3 -m pip install absolufy-imports uv
 
       - name: Enforce relative imports in package
         run: >
           find rpmautospec -name \*.py -print0
           | xargs -0 absolufy-imports --never
 
-      - name: Check Poetry lock file consistency
+      - name: Check UV lock file consistency
         run: >
-          poetry check --lock
+          uv lock --check
 
       - name: Run style tests
         run: tox -e format,lint
@@ -51,9 +51,9 @@ jobs:
           glibc-langpack-en
           krb5-devel
           libffi-devel
-          poetry
           rpm
           rpm-build
+          uv
 
       - name: run tests through tox
         run: "tox -e py${{ matrix.pyver }}"
