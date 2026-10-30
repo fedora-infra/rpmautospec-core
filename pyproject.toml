@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rpmautospec-core"
-version = "0.2.0"
+version = "0.3.0"
 description = "Core functionality for rpmautospec"
 authors = [{ name = "Nils Philippsen", email = "nils@redhat.com" }]
 requires-python = ">=3.6,<4"
