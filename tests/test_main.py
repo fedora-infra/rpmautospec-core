@@ -5,6 +5,7 @@ from typing import TextIO
 
 import pytest
 
+import rpmautospec_core
 from rpmautospec_core import main
 
 __HERE__ = Path(__file__).parent
@@ -240,3 +241,75 @@ class TestMain:
                 check_autorelease=False,
                 check_is_processed=False,
             )
+
+    def test_autochangelog_macro(self):
+        """%autochangelog accepts the options its users set and the package exports the macro."""
+        assert main.AUTOCHANGELOG_MACRO == "autochangelog(m:d:)"
+        assert rpmautospec_core.AUTOCHANGELOG_MACRO is main.AUTOCHANGELOG_MACRO
+
+    @pytest.mark.parametrize(
+        "line",
+        (
+            "%autochangelog",
+            "%autochangelog -m tagged-only -d highest",
+            "  %autochangelog",
+            "\t%autochangelog",
+            "%{autochangelog}",
+            "%{?autochangelog}",
+            "%{autochangelog -m tagged-only}",
+            "%{?autochangelog -m tagged-only -d highest}",
+            "%{autochangelog }",
+            # What follows the macro name is no part of the name.
+            "%autochangelog%{nil}",
+            "%autochangelog,-m x",
+            "%autochangelog-x",
+            "%{autochangelog -m x}tail",
+        ),
+    )
+    def test_autochangelog_re_match(self, line):
+        assert main.autochangelog_re.match(line)
+
+    @pytest.mark.parametrize(
+        "line",
+        (
+            "%autochangelogx",
+            "%autochangelogx -m tagged-only",
+            "%{autochangelogx}",
+            "%{autochangelog_x -m tagged-only}",
+            "%%autochangelog",
+            "%{autochangelog -m tagged-only",
+            "%{autochangelog%{nil} -m x}",
+            "%?autochangelog",
+            "%{!?autochangelog}",
+            "# %autochangelog",
+            "x %autochangelog",
+            "",
+        ),
+    )
+    def test_autochangelog_re_no_match(self, line):
+        assert main.autochangelog_re.match(line) is None
+
+    def test_autochangelog_re_export(self):
+        assert rpmautospec_core.autochangelog_re is main.autochangelog_re
+
+    @pytest.mark.parametrize(
+        "line, expected_lineno",
+        (
+            ("%autochangelog", 4),
+            ("%autochangelog -m tagged-only", 4),
+            ("%{autochangelog}", 4),
+            ("%{?autochangelog}", 4),
+            ("%{autochangelog -m tagged-only -d highest}", 4),
+            ("%{?autochangelog -m tagged-only}", 4),
+            ("%autochangelogx", None),
+            ("%{autochangelogx -m tagged-only}", None),
+        ),
+    )
+    def test_check_specfile_features_braced_autochangelog(self, tmp_path, line, expected_lineno):
+        specfile = tmp_path / "pkg.spec"
+        specfile.write_text(f"Name: pkg\nRelease: %autorelease\n%changelog\n{line}\n")
+
+        features = main.check_specfile_features(specfile, enable_caching=False)
+
+        assert features.has_autochangelog == (expected_lineno is not None)
+        assert features.autochangelog_lineno == expected_lineno
