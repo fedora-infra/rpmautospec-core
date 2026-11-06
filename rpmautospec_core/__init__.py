@@ -1,5 +1,7 @@
 from .main import (  # noqa: F401
+    AUTOCHANGELOG_MACRO,
     AUTORELEASE_MACRO,
+    autochangelog_re,
     check_specfile_features,
     specfile_uses_rpmautospec,
 )

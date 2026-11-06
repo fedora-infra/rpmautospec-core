@@ -14,6 +14,11 @@ from collections import namedtuple
 # implicit default, so only non-zero epochs are encoded in the tag.
 GIT_TAG_EPOCH_SEPARATOR = "!"
 
+# Versions and releases can contain ~ and ^ (see rpm-version(7)), which git ref names cannot. They
+# are written as = and , in the tag.
+_TO_GIT_TAG = str.maketrans("~^", "=,")
+_FROM_GIT_TAG = str.maketrans("=,", "~^")
+
 NVR = namedtuple("NVR", ["name", "epoch", "version", "release"])
 
 
@@ -39,8 +44,8 @@ def parse_nvr(nvr: str) -> NVR:
     Format: [E!]N-V-R where E is a numeric epoch (optional),
     N is the package name, V is version, R is release.
 
-    :param nvr: an [E!]N-V-R string
-    :return: NVR namedtuple with name, epoch, version, release fields
+    :param nvr: an [E!]N-V-R string, with = and , for ~ and ^ as format_nvr() writes it
+    :return: NVR namedtuple with name, epoch, version, release fields, with ~ and ^ restored
     :raises ValueError: if nvr cannot be parsed
     """
     try:
@@ -59,7 +64,12 @@ def parse_nvr(nvr: str) -> NVR:
             raise ValueError(f"Epoch must be all digits, is {epoch!r}")
         if not name:
             raise ValueError(f"Empty name after epoch in NVR: {nvr!r}")
-    return NVR(name=name, epoch=epoch, version=version, release=release)
+    return NVR(
+        name=name.translate(_FROM_GIT_TAG),
+        epoch=epoch,
+        version=version.translate(_FROM_GIT_TAG),
+        release=release.translate(_FROM_GIT_TAG),
+    )
 
 
 def format_namespaced_nvr(namespace: str, name: str, epoch: str, version: str, release: str) -> str:
@@ -81,10 +91,13 @@ def format_nvr(name: str, epoch: str, version: str, release: str) -> str:
 
     :param name: package name
     :param epoch: epoch number as string; empty or "0" yields no epoch prefix
-    :param version: package version
+    :param version: package version, with ~ and ^ written as = and ,
     :param release: package release number (raw number, no suffix/etc)
     :return: formatted package [E!]N-V-R
     """
+    name = name.translate(_TO_GIT_TAG)
+    version = version.translate(_TO_GIT_TAG)
+    release = release.translate(_TO_GIT_TAG)
     if epoch and epoch != "0":
         return f"{epoch}{GIT_TAG_EPOCH_SEPARATOR}{name}-{version}-{release}"
     return f"{name}-{version}-{release}"
