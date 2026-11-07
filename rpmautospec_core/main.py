@@ -6,10 +6,12 @@ from typing import Union
 
 # the %autorelease macro including parameters
 AUTORELEASE_MACRO = "autorelease(e:s:pb:nz)"
+# the %autochangelog macro including parameters
+AUTOCHANGELOG_MACRO = "autochangelog(m:d:)"
 
 autorelease_re = re.compile(r"%(?:autorelease(?:\s|$)|\{\??autorelease(?:\s+[^\}]*)?\})")
 changelog_re = re.compile(r"^%changelog(?:\s.*)?$", re.IGNORECASE)
-autochangelog_re = re.compile(r"\s*%(?:autochangelog|\{\??autochangelog\})\s*")
+autochangelog_re = re.compile(r"\s*%(?:autochangelog(?!\w)|\{\??autochangelog(?:\s[^}]*)?\})")
 autorelease_definition_re = re.compile(r"^\s*%define\s+autorelease\s*\(")
 
 
