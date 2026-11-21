@@ -1,3 +1,6 @@
+import shutil
+import subprocess
+
 import pytest
 
 from rpmautospec_core.nvr_util import (
@@ -162,3 +165,59 @@ class TestEpochVersion:
 
     def test_no_epoch_key(self):
         assert epoch_version(NVR(name="x", epoch="", version="1.0", release="1")) == "1.0"
+
+
+class TestGitUnsafeCharacters:
+    """~ and ^ are valid in RPM versions but not in git ref names, so tags write = and ,."""
+
+    CASES = (
+        pytest.param("pkg", "", "1.0~rc1", "3", "pkg-1.0=rc1-3", id="tilde"),
+        pytest.param("pkg", "", "1.0^20240101git", "3", "pkg-1.0,20240101git-3", id="caret"),
+        pytest.param("pkg", "", "1.0~rc1^snap", "3", "pkg-1.0=rc1,snap-3", id="both"),
+        pytest.param("pkg", "2", "1.0~~rc1", "3", "2!pkg-1.0==rc1-3", id="epoch-and-repeated"),
+        pytest.param("pkg", "", "1.0_1+2", "3", "pkg-1.0_1+2-3", id="underscore-and-plus-kept"),
+        pytest.param("pkg", "", "1.0", "3", "pkg-1.0-3", id="plain-unchanged"),
+    )
+
+    @pytest.mark.parametrize("name, epoch, version, release, expected", CASES)
+    def test_format(self, name, epoch, version, release, expected):
+        assert format_nvr(name, epoch, version, release) == expected
+        assert format_namespaced_nvr("ns/x", name, epoch, version, release) == f"ns/x/{expected}"
+
+    @pytest.mark.parametrize("name, epoch, version, release, expected", CASES)
+    def test_parse_restores_the_version(self, name, epoch, version, release, expected):
+        assert parse_nvr(expected) == NVR(name, epoch, version, release)
+        assert parse_namespaced_nvr(f"ns/x/{expected}", "ns/x") == NVR(
+            name, epoch, version, release
+        )
+
+    @pytest.mark.parametrize("name, epoch, version, release, expected", CASES)
+    def test_epoch_version_of_the_parsed_tag_is_the_spec_version(
+        self, name, epoch, version, release, expected
+    ):
+        parsed = parse_nvr(expected)
+        assert epoch_version(parsed) == (f"{epoch}:{version}" if epoch else version)
+
+    def test_underscore_is_not_a_tilde(self):
+        """DEP-14 writes ~ as _, which would turn the version 1.0_1 into 1.0~1."""
+        assert parse_nvr("pkg-1.0_1-3").version == "1.0_1"
+
+    @pytest.mark.parametrize("name, epoch, version, release, expected", CASES)
+    def test_git_accepts_the_tag(self, tmp_path, name, epoch, version, release, expected):
+        git = shutil.which("git")
+        if not git:
+            pytest.skip("git is not available")
+        tag = format_namespaced_nvr("fedora/f44", name, epoch, version, release)
+        result = subprocess.run([git, "check-ref-format", f"refs/tags/{tag}"], check=False)
+        assert result.returncode == 0, tag
+
+    def test_git_rejects_the_unencoded_names(self):
+        """The reason for the swap: git refuses a ~ or ^ in the name."""
+        git = shutil.which("git")
+        if not git:
+            pytest.skip("git is not available")
+        for version in ("1.0~rc1", "1.0^snap"):
+            result = subprocess.run(
+                [git, "check-ref-format", f"refs/tags/ns/pkg-{version}-1"], check=False
+            )
+            assert result.returncode != 0
